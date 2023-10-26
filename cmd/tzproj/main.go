@@ -15,6 +15,8 @@ import (
 	// endpoints
 	"github.com/ssleert/tzproj/internal/endpoints/put"
 	"github.com/ssleert/tzproj/internal/endpoints/del"
+	"github.com/ssleert/tzproj/internal/endpoints/update"
+	"github.com/ssleert/tzproj/internal/endpoints/get"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
@@ -30,8 +32,10 @@ type endPoint struct {
 
 var (
 	endPoints = [...]endPoint{
-		{"/put", put.Start, put.Handler, put.Stop},
-		{"/del", del.Start, del.Handler, del.Stop},
+		{"/put",    put.Start,    put.Handler,    put.Stop},
+		{"/del",    del.Start,    del.Handler,    del.Stop},
+		{"/update", update.Start, update.Handler, update.Stop},
+		{"/get",    get.Start,    get.Handler,    get.Stop},
 	}
 	logger zerolog.Logger
 )
@@ -162,7 +166,7 @@ func start() {
 		err := e.start(e.name, &logger)
 		if err != nil {
 			for j := 0; j <= i; j++ {
-				logger.Info().Msgf("%s stop called\n", endPoints[j].name)
+				logger.Info().Msgf("%s stop called", endPoints[j].name)
 				if err := endPoints[j].stop(); err != nil {
 					logger.Error().Err(err)
 				}
@@ -174,7 +178,7 @@ func start() {
 
 func stop() {
 	for _, e := range endPoints {
-		logger.Info().Msgf("%s stop called\n", e.name)
+		logger.Info().Msgf("%s stop called", e.name)
 		err := e.stop()
 		if err != nil {
 			logger.Fatal().Err(err)

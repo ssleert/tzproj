@@ -2,6 +2,8 @@ package vars
 
 import (
 	"errors"
+	"os"
+	"strconv"
 
 	"github.com/rs/zerolog"
   "github.com/caitlinelfring/go-env-default"
@@ -54,9 +56,9 @@ func PrintVars(log *zerolog.Logger) {
 		Send()
 }
 
-//type convertable interface {
-//	int | int64 | float64 | string
-//}
+type convertable interface {
+	int | int64 | float64 | string
+}
 
 // WHY FUCKING GOLANG CANT DO TYPE SWITCH
 // ON TYPE PARAMETER WHY U CANT FUCKING ASSHOLE
@@ -66,32 +68,35 @@ func PrintVars(log *zerolog.Logger) {
 // okey, now i am chill and
 // any(def).(type) can work properly)
 //
-// func CheckEnv[T convertable](s string, def T) T {
-// 	b := os.Getenv(s)
-// 	if b == "" {
-// 		return def
-// 	}
-// 
-// 	var result any
-// 	switch def.(type) {
-// 	case int:
-// 		result, err := strconv.Atoi(b)
-// 		if err != nil {
-// 			return def
-// 		}
-// 	case int64:
-// 		l, err := strconv.Atoi(b)
-// 		if err != nil {
-// 			return def
-// 		}
-// 		result = int64(l)
-// 	case float64:	
-// 		result, err := strconv.ParseFloat(b, 64)
-// 		if err != nil {
-// 			return def
-// 		}	
-// 	case string:
-// 		result = b
-// 	}
-// 	return result.(T)
-// }
+func CheckEnv[T convertable](s string, def T) T {
+	b := os.Getenv(s)
+	if b == "" {
+		return def
+	}
+
+	var (
+		result any
+		err error
+	)
+	switch any(def).(type) {
+	case int:
+		result, err = strconv.Atoi(b)
+		if err != nil {
+			return def
+		}
+	case int64:
+		l, err := strconv.Atoi(b)
+		if err != nil {
+			return def
+		}
+		result = int64(l)
+	case float64:	
+		result, err = strconv.ParseFloat(b, 64)
+		if err != nil {
+			return def
+		}	
+	case string:
+		result = b
+	}
+	return result.(T)
+}

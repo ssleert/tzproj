@@ -1,11 +1,23 @@
 package conversions
 
 import (
+	"github.com/ssleert/tzproj/internal/db"
 	"github.com/ssleert/tzproj/pkg/nationalize"
 )
 
+func CountriesToNationalization(countries []nationalize.Country) []db.Nationalization {
+	out := make([]db.Nationalization, len(countries))
+	for i := range countries {
+		out[i] = db.Nationalization{
+			CountryCode: countries[i].Id,
+			Probability: countries[i].Probability,
+		}
+	}
+	return out
+}
+
 func CountryToIds(countries []nationalize.Country) []string {
-	out := make([]string, 0, 32)
+	out := make([]string, 0, len(countries))
 	for _, e := range countries {
 		out = append(out, e.Id)
 	}
@@ -13,7 +25,7 @@ func CountryToIds(countries []nationalize.Country) []string {
 }
 
 func CountryToProbalities(countries []nationalize.Country) []float64 {
-	out := make([]float64, 0, 32)
+	out := make([]float64, 0, len(countries))
 	for _, e := range countries {
 		out = append(out, e.Probability)
 	}

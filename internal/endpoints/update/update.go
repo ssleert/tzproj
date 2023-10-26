@@ -1,4 +1,4 @@
-package del
+package update
 
 import (
 	"net/http"
@@ -22,10 +22,7 @@ var (
 	dbConn *pgxpool.Pool
 )
 
-type input struct {
-	Id int `json:"delete_id"`
-}
-
+type input db.All
 type output struct {
 	Status int `json:"-"`
 	Err string `json:"error"`
@@ -46,6 +43,7 @@ func Start(n string, log *zerolog.Logger) error {
 		logger.Error().
 			Err(err).
 			Msg("error with db connection")
+
 		return err
 	}
 
@@ -80,21 +78,19 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Trace().
-		Int("people_id", in.Id).
-		Msg("deleting data db")	
+		Int("people_id", in.P.Id).
+		Msg("updating data in db")	
 
-	err = dbConn.AcquireFunc(context.Background(), 
-		func(c *pgxpool.Conn) error {
-			err = db.DeleteAllById(c, in.Id)
-			return err
-		},
-	)
+	err = dbConn.AcquireFunc(context.Background(), func(c *pgxpool.Conn) error {
+		err = db.ReplaceAll(c, db.All(in))
+		return err
+	})
 	if err == vars.ErrNotInDb {
 		log.Warn().
 			Err(err).
 			Msg("data not in db")
 
-		out.Err = err.Error()
+		out.Err = vars.ErrNotInDb.Error()
 		out.Status = http.StatusInternalServerError
 		return
 	}

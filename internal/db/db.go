@@ -24,7 +24,7 @@ func (log zerologLogger) Verbose() bool {
 	return true
 }
 
-func GetConnString() (string) {
+func GetConnString() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:5432/postgres?%s",
 		vars.PostgresUser,
@@ -51,17 +51,20 @@ func MakeMigrations(log *zerolog.Logger) error {
 		"file://" + path,
 		GetConnString(),
 	)
-	m.Log = zerologLogger{log}
 	if err != nil {
 		return err
 	}
-	
+	m.Log = zerologLogger{log}
+	m.Log.Printf("created migration client ")
+
 	if vars.PostgresForceDrop {
+		m.Log.Printf("force dropping db ")
 		err = m.Down()
 		if err != nil && err != migrate.ErrNoChange {
 			return err
 		}
 	}
+	m.Log.Printf("uping migrations ")
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		return err

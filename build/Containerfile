@@ -5,10 +5,8 @@ RUN go mod download
 COPY . .
 RUN go build -race ./cmd/tzproj
 
-FROM ubuntu:23.04
-RUN apt update
-RUN apt install ca-certificates -y
-RUN update-ca-certificates
+FROM fedora:38
+RUN update-ca-trust
 WORKDIR /app
 COPY ./db/migrations /app/db/migrations
 COPY --from=builder /app/tzproj /app/app

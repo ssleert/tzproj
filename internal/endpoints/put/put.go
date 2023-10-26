@@ -2,9 +2,7 @@ package put
 
 import (
 	"net/http"
-	"encoding/json"
 	"context"
-	"io"
 
 	"github.com/ssleert/tzproj/internal/utils"
 	"github.com/ssleert/tzproj/internal/vars"
@@ -34,20 +32,24 @@ var (
 )
 
 type input struct {
+	Change     bool    `json:"change"`
 	Name       string  `json:"name"`
 	Surname    string  `json:"surname"`
 	Patronymic *string `json:"patronymic,omitempty"`
 }
 
 type output struct {
-	WritedId int `json:"writed_id"`
-	Err string   `json:"error"`
+	Status   int    `json:"-"`
+	WritedId int    `json:"writed_id"`
+	Err      string `json:"error"`
 }
 
 func Start(n string, log *zerolog.Logger) error {
 	var err error
+
 	logger = *log
 	name = n
+
 	logger.Trace().Msg("creating req limiter")
 	limit = limiter.New[string](vars.LimitPerHour, 3600, 2048, 4096, 20)
 
@@ -57,29 +59,36 @@ func Start(n string, log *zerolog.Logger) error {
 		logger.Error().
 			Err(err).
 			Msg("error with db connection")
+
 		return err
 	}
 
 	logger.Trace().Msg("creating agify.io, genderize.io and nationalize.io clients")
+
 	agifyClient, err = agify.New()
 	if err != nil {
 		logger.Error().
 			Err(err).
 			Msg("agify.io client creation failed")
+
 		return err
 	}
+
 	genderizeClient, err = genderize.New()
 	if err != nil {
 		logger.Error().
 			Err(err).
 			Msg("genderize.io client creation failed")
+
 		return err
 	}
+
 	nationalizeClient, err = nationalize.New()
 	if err != nil {
 		logger.Error().
 			Err(err).
 			Msg("nationalize.io client creation failed")
+
 		return err
 	}
 
@@ -89,51 +98,27 @@ func Start(n string, log *zerolog.Logger) error {
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
 	log := hlog.FromRequest(r)
 	log.Info().Msg("connected")
 
-	httpStatus := http.StatusOK
 	in := input{}
 	out := output{Err: "null"}
+
+	log.Trace().Interface("in", in).Send()
+
 	defer func() { 
-		utils.WriteJsonAndStatusInRespone(w, &out, httpStatus)
+		utils.WriteJsonAndStatusInRespone(w, &out, out.Status)
 	}()
 
-	log.Trace().Msg("checking req limiter")
-	if !limit.Try(utils.GetAddrFromStr(&r.RemoteAddr)) {
-		log.Warn().Msg("action limited")
-		out.Err = vars.ErrActionLimited.Error()
-		httpStatus = http.StatusTooManyRequests
-		return
-	}
-	log.Trace().Msg("checking content len")
-	if r.ContentLength > vars.MaxBodyLen {
-		log.Warn().
-			Int64("content_length", r.ContentLength).
-			Int64("max_content_length", vars.MaxBodyLen).
-			Msg("content length is too big")
-		out.Err = vars.ErrBodyLenIsTooBig.Error()
-		httpStatus = http.StatusRequestEntityTooLarge
-		return
-	}	
-	log.Trace().Msg("reading body")
-	body, err := io.ReadAll(r.Body)
+	var err error
+	out.Status, err = utils.EndPointPrerequisites(
+		log, w, r, limit, &in,
+	)
 	if err != nil {
-		log.Warn().
-			Err(err).
-			Msg("cant read all body")
-		out.Err = vars.ErrBodyReadingFailed.Error()
-		httpStatus = http.StatusInsufficientStorage
-		return
-	}
-	log.Trace().Msg("unmarshaling json")
-	err = json.Unmarshal(body, &in)
-	if err != nil {
-		log.Warn().
-			Err(err).
-			Msg("cant unmarshal body to json")
-		out.Err = vars.ErrInputJsonIsIncorrect.Error()
-		httpStatus = http.StatusUnprocessableEntity
+		log.Warn().Err(err).Msg("preresquisites error")
+
+		out.Err = err.Error()
 		return
 	}
 
@@ -144,20 +129,26 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	)
 	go func() {
 		log.Trace().Msg("getting agify.io data")
+
 		o, err := agifyClient.Get(in.Name)
 		ageChan <- utils.Result[agify.Output]{o, err}
+
 		close(ageChan)
 	}()
 	go func() {
 		log.Trace().Msg("getting genderize.io data")
+
 		o, err := genderizeClient.Get(in.Name)
 		genderChan <- utils.Result[genderize.Output]{o, err}
+
 		close(genderChan)
 	}()
 	go func() {
 		log.Trace().Msg("getting nationalize.io data")
+
 		o, err := nationalizeClient.Get(in.Name)
 		nationChan <- utils.Result[nationalize.Output]{o, err}
+
 		close(nationChan)
 	}()
 
@@ -168,26 +159,30 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		log.Warn().
 			Err(err).
 			Msg("agify.io error")
+
 		out.Err = vars.ErrWithExternalApi.Error()
-		httpStatus = http.StatusInternalServerError
+		out.Status = http.StatusInternalServerError
 		return
 	}
 	if genderResult.Err != nil {
 		log.Warn().
 			Err(err).
 			Msg("genderize.io error")
+
 		out.Err = vars.ErrWithExternalApi.Error()
-		httpStatus = http.StatusInternalServerError
+		out.Status = http.StatusInternalServerError
 		return
 	}
 	if nationResult.Err != nil {
 		log.Warn().
 			Err(err).
 			Msg("nationalize.io error")
+
 		out.Err = vars.ErrWithExternalApi.Error()
-		httpStatus = http.StatusInternalServerError
+		out.Status = http.StatusInternalServerError
 		return
 	}
+
 	age := ageResult.Val
 	gender := genderResult.Val
 	nation := nationResult.Val
@@ -203,10 +198,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			Gender: gender.Gender,
 			Probability: gender.Probability,
 		},
-		N: db.Nationalization{
-			CountryIds: conversions.CountryToIds(nation.Countries),
-			Probabilities: conversions.CountryToProbalities(nation.Countries),
-		},
+		N: conversions.CountriesToNationalization(
+			nation.Countries,
+		),
 	}
 
 	log.Trace().
@@ -222,29 +216,27 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		log.Warn().
 			Err(err).
 			Msg("data already in db")
-		out.Err = vars.ErrAlreadyInDb.Error()
-		httpStatus = http.StatusInternalServerError
+
+		out.Err = err.Error()
+		out.Status = http.StatusInternalServerError
 		return
 	}
 	if err != nil {
 		log.Warn().
 			Err(err).
 			Msg("an error with database")
+
 		out.Err = vars.ErrWithDb.Error()
-		httpStatus = http.StatusInternalServerError
+		out.Status = http.StatusInternalServerError
 		return
 	}
+
 	out.WritedId = id
 
 	log.Debug().
-		RawJSON("body", body).
 		Interface("input_json", in).
-		Send()
-	log.Trace().
-		Bool("is_patronymic", in.Patronymic != nil).
-		Send()
-	log.Debug().
 		Interface("output_json", out).
+		Bool("is_patronymic", in.Patronymic != nil).
 		Send()
 }
 

@@ -1,4 +1,4 @@
-package del
+package get
 
 import (
 	"net/http"
@@ -22,13 +22,16 @@ var (
 	dbConn *pgxpool.Pool
 )
 
-type input struct {
-	Id int `json:"delete_id"`
+type input struct {	
+	Offset   int                  `json:"offset"`
+	Limit    int                  `json:"limit"`
+	FilterBy []db.FilterOperation `json:"filter_by"`
 }
 
 type output struct {
-	Status int `json:"-"`
-	Err string `json:"error"`
+	Status int      `json:"-"`
+	Data   []db.All `json:"data"`
+	Err    string   `json:"error"`
 }
 
 func Start(n string, log *zerolog.Logger) error {
@@ -46,6 +49,7 @@ func Start(n string, log *zerolog.Logger) error {
 		logger.Error().
 			Err(err).
 			Msg("error with db connection")
+
 		return err
 	}
 
@@ -79,25 +83,36 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	where, args := db.FilterOperationsToSql(0, in.FilterBy)
 	log.Trace().
-		Int("people_id", in.Id).
-		Msg("deleting data db")	
+		Str("where", where).
+		Interface("arg", args[0]).
+		Send()
 
+	log.Trace().
+		Interface("filter_by", in.FilterBy[0]).
+		Int("limit", in.Limit).
+		Int("offset", in.Offset).
+		Msg("updating data in db")
+
+	var allData []db.All
 	err = dbConn.AcquireFunc(context.Background(), 
 		func(c *pgxpool.Conn) error {
-			err = db.DeleteAllById(c, in.Id)
+			allData, err = db.GetPeoples(c, in.Offset, in.Limit, in.FilterBy)
 			return err
 		},
 	)
+
 	if err == vars.ErrNotInDb {
 		log.Warn().
 			Err(err).
-			Msg("data not in db")
+			Msg("no data in db")
 
 		out.Err = err.Error()
 		out.Status = http.StatusInternalServerError
 		return
 	}
+
 	if err != nil {
 		log.Warn().
 			Err(err).
@@ -107,6 +122,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		out.Status = http.StatusInternalServerError
 		return
 	}
+	
+	out.Data = allData
 
 	log.Debug().
 		Interface("input_json", in).
