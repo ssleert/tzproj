@@ -1,17 +1,17 @@
 package get
 
 import (
-	"net/http"
 	"context"
+	"net/http"
 
+	"github.com/ssleert/tzproj/internal/db"
 	"github.com/ssleert/tzproj/internal/utils"
 	"github.com/ssleert/tzproj/internal/vars"
-	"github.com/ssleert/tzproj/internal/db"
-	
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/ssleert/limiter"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	dbConn *pgxpool.Pool
 )
 
-type input struct {	
+type input struct {
 	Offset   int                  `json:"offset"`
 	Limit    int                  `json:"limit"`
 	FilterBy []db.FilterOperation `json:"filter_by"`
@@ -68,7 +68,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().Interface("in", in).Send()
 
-	defer func() { 
+	defer func() {
 		utils.WriteJsonAndStatusInRespone(w, &out, out.Status)
 	}()
 
@@ -96,7 +96,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		Msg("updating data in db")
 
 	var allData []db.All
-	err = dbConn.AcquireFunc(context.Background(), 
+	err = dbConn.AcquireFunc(context.Background(),
 		func(c *pgxpool.Conn) error {
 			allData, err = db.GetPeoples(c, in.Offset, in.Limit, in.FilterBy)
 			return err
@@ -122,7 +122,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		out.Status = http.StatusInternalServerError
 		return
 	}
-	
+
 	out.Data = allData
 
 	log.Debug().

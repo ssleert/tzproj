@@ -1,17 +1,17 @@
 package update
 
 import (
-	"net/http"
 	"context"
+	"net/http"
 
+	"github.com/ssleert/tzproj/internal/db"
 	"github.com/ssleert/tzproj/internal/utils"
 	"github.com/ssleert/tzproj/internal/vars"
-	"github.com/ssleert/tzproj/internal/db"
-	
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/ssleert/limiter"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -24,8 +24,8 @@ var (
 
 type input db.All
 type output struct {
-	Status int `json:"-"`
-	Err string `json:"error"`
+	Status int    `json:"-"`
+	Err    string `json:"error"`
 }
 
 func Start(n string, log *zerolog.Logger) error {
@@ -62,7 +62,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().Interface("in", in).Send()
 
-	defer func() { 
+	defer func() {
 		utils.WriteJsonAndStatusInRespone(w, &out, out.Status)
 	}()
 
@@ -79,7 +79,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().
 		Int("people_id", in.P.Id).
-		Msg("updating data in db")	
+		Msg("updating data in db")
 
 	err = dbConn.AcquireFunc(context.Background(), func(c *pgxpool.Conn) error {
 		err = db.ReplaceAll(c, db.All(in))

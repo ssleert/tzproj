@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/caitlinelfring/go-env-default"
 	"github.com/rs/zerolog"
-  "github.com/caitlinelfring/go-env-default"
 )
 
 var (
@@ -26,13 +26,13 @@ var (
 
 	// values from env
 	HttpPort          = env.GetDefault("HTTP_PORT", "9876")
-	EndPointPrefix    = env.GetDefault("API_PREFIX", "")	
-	LogStdout         = env.GetBoolDefault("LOG_STDOUT", true) 
+	EndPointPrefix    = env.GetDefault("API_PREFIX", "")
+	LogStdout         = env.GetBoolDefault("LOG_STDOUT", true)
 	DebugMode         = env.GetBoolDefault("DEBUG_MODE", true)
 	PostgresUser      = env.GetDefault("POSTGRES_USER", "admin")
 	PostgresPassword  = env.GetDefault("POSTGRES_PASSWORD", "admin")
 	PostgresDbUrl     = env.GetDefault("POSTGRES_DB_URL", "postgres")
-	PostgresConnFlags = env.GetDefault("POSTGRES_CONN_FLAGS", "")  
+	PostgresConnFlags = env.GetDefault("POSTGRES_CONN_FLAGS", "")
 	PostgresForceDrop = env.GetBoolDefault("POSTGRES_FORCE_DROP", false) // drop db before start
 	MaxBodyLen        = env.GetInt64Default("MAX_BODY_LEN", 16384)
 	LimitPerHour      = env.GetIntDefault("LIMIT_PER_HOUR", 60)
@@ -62,12 +62,11 @@ type convertable interface {
 
 // WHY FUCKING GOLANG CANT DO TYPE SWITCH
 // ON TYPE PARAMETER WHY U CANT FUCKING ASSHOLE
-// INSTANTIATE FUCKING COMPILE-TIME SWITCH 
+// INSTANTIATE FUCKING COMPILE-TIME SWITCH
 // WHAT THE HECK
 //
 // okey, now i am chill and
 // any(def).(type) can work properly)
-//
 func CheckEnv[T convertable](s string, def T) T {
 	b := os.Getenv(s)
 	if b == "" {
@@ -76,7 +75,7 @@ func CheckEnv[T convertable](s string, def T) T {
 
 	var (
 		result any
-		err error
+		err    error
 	)
 	switch any(def).(type) {
 	case int:
@@ -90,11 +89,11 @@ func CheckEnv[T convertable](s string, def T) T {
 			return def
 		}
 		result = int64(l)
-	case float64:	
+	case float64:
 		result, err = strconv.ParseFloat(b, 64)
 		if err != nil {
 			return def
-		}	
+		}
 	case string:
 		result = b
 	}

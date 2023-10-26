@@ -1,11 +1,12 @@
 package db
 
 import (
-	"strconv"
 	"encoding/json"
+	"strconv"
 )
 
 type CompareOP int
+
 const (
 	Less CompareOP = iota
 	LessEqual
@@ -19,10 +20,10 @@ type FilterOperation struct {
 	Key   string    `json:"key"`
 	Op    CompareOP `json:"op"`
 	Value any       `json:"value"`
-} 
+}
 
-func FilterOperationsToSql(base int,fs []FilterOperation) (string, []any) {
-	s      := ""
+func FilterOperationsToSql(base int, fs []FilterOperation) (string, []any) {
+	s := ""
 	values := make([]any, len(fs))
 
 	if len(fs) > 0 {
@@ -32,11 +33,11 @@ func FilterOperationsToSql(base int,fs []FilterOperation) (string, []any) {
 	}
 
 	for i, e := range fs {
-		if i > 0 && i != len(fs) - 1 {
+		if i > 0 && i != len(fs)-1 {
 			s += " AND "
 		}
 
-		s += e.Key + e.Op.String() + "$" + strconv.Itoa(base + i + 1)
+		s += e.Key + e.Op.String() + "$" + strconv.Itoa(base+i+1)
 		values[i] = e.Value
 	}
 	return s, values

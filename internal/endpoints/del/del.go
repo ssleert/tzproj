@@ -1,17 +1,17 @@
 package del
 
 import (
-	"net/http"
 	"context"
+	"net/http"
 
+	"github.com/ssleert/tzproj/internal/db"
 	"github.com/ssleert/tzproj/internal/utils"
 	"github.com/ssleert/tzproj/internal/vars"
-	"github.com/ssleert/tzproj/internal/db"
-	
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/ssleert/limiter"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -27,8 +27,8 @@ type input struct {
 }
 
 type output struct {
-	Status int `json:"-"`
-	Err string `json:"error"`
+	Status int    `json:"-"`
+	Err    string `json:"error"`
 }
 
 func Start(n string, log *zerolog.Logger) error {
@@ -64,7 +64,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().Interface("in", in).Send()
 
-	defer func() { 
+	defer func() {
 		utils.WriteJsonAndStatusInRespone(w, &out, out.Status)
 	}()
 
@@ -81,9 +81,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().
 		Int("people_id", in.Id).
-		Msg("deleting data db")	
+		Msg("deleting data db")
 
-	err = dbConn.AcquireFunc(context.Background(), 
+	err = dbConn.AcquireFunc(context.Background(),
 		func(c *pgxpool.Conn) error {
 			err = db.DeleteAllById(c, in.Id)
 			return err

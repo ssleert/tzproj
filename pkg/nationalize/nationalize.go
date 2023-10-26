@@ -1,10 +1,10 @@
 package nationalize
 
 import (
-	"net/http"
-	"net/http/cookiejar"
 	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/cookiejar"
 )
 
 const (
@@ -52,7 +52,7 @@ func (c *Client) Get(name string) (Output, error) {
 	if err != nil {
 		return Output{}, err
 	}
-	
+
 	out := Output{}
 	err = json.Unmarshal(body, &out)
 	if err != nil {

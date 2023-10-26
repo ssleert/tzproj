@@ -1,22 +1,22 @@
 package put
 
 import (
-	"net/http"
 	"context"
+	"net/http"
 
+	"github.com/ssleert/tzproj/internal/conversions"
+	"github.com/ssleert/tzproj/internal/db"
 	"github.com/ssleert/tzproj/internal/utils"
 	"github.com/ssleert/tzproj/internal/vars"
-	"github.com/ssleert/tzproj/internal/db"
-	"github.com/ssleert/tzproj/internal/conversions"
 
 	"github.com/ssleert/tzproj/pkg/agify"
 	"github.com/ssleert/tzproj/pkg/genderize"
 	"github.com/ssleert/tzproj/pkg/nationalize"
-	
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 	"github.com/ssleert/limiter"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -107,7 +107,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().Interface("in", in).Send()
 
-	defer func() { 
+	defer func() {
 		utils.WriteJsonAndStatusInRespone(w, &out, out.Status)
 	}()
 
@@ -123,7 +123,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		ageChan = make(chan utils.Result[agify.Output])
+		ageChan    = make(chan utils.Result[agify.Output])
 		genderChan = make(chan utils.Result[genderize.Output])
 		nationChan = make(chan utils.Result[nationalize.Output])
 	)
@@ -186,16 +186,16 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	age := ageResult.Val
 	gender := genderResult.Val
 	nation := nationResult.Val
-	
+
 	allData := db.All{
 		P: db.People{
-			Name: in.Name,
-			Surname: in.Surname,
+			Name:       in.Name,
+			Surname:    in.Surname,
 			Patronymic: in.Patronymic,
-			Age: age.Age,
+			Age:        age.Age,
 		},
 		G: db.Gender{
-			Gender: gender.Gender,
+			Gender:      gender.Gender,
 			Probability: gender.Probability,
 		},
 		N: conversions.CountriesToNationalization(
@@ -205,7 +205,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	log.Trace().
 		Interface("all_data", allData).
-		Msg("writing data to db")	
+		Msg("writing data to db")
 
 	id := 0
 	err = dbConn.AcquireFunc(context.Background(), func(c *pgxpool.Conn) error {

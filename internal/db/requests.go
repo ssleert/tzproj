@@ -45,13 +45,13 @@ func GetPeopleId(conn *pgxpool.Conn, p People) (int, error) {
 		err = conn.QueryRow(context.TODO(),
 			`SELECT people_id FROM peoples 
 			 WHERE name = $1 AND surname = $2 AND age = $3 AND patronymic = $4`,
-			 p.Name, p.Surname, p.Age, *p.Patronymic,
+			p.Name, p.Surname, p.Age, *p.Patronymic,
 		).Scan(&p.Id)
 	} else {
 		err = conn.QueryRow(context.TODO(),
 			`SELECT people_id FROM peoples 
 			 WHERE name = $1 AND surname = $2 AND age = $3`,
-			 p.Name, p.Surname, p.Age,
+			p.Name, p.Surname, p.Age,
 		).Scan(&p.Id)
 	}
 	if err != nil {
@@ -63,19 +63,19 @@ func GetPeopleId(conn *pgxpool.Conn, p People) (int, error) {
 func CheckPeople(conn *pgxpool.Conn, p People) (bool, error) {
 	var (
 		exists bool
-		err error
+		err    error
 	)
 	if p.Patronymic != nil {
 		err = conn.QueryRow(context.TODO(),
 			`SELECT EXISTS(SELECT 1 FROM peoples 
-			 WHERE name = $1 AND surname = $2 AND age = $3 AND patronymic = $4)`,	
-			 p.Name, p.Surname, p.Age, *p.Patronymic,
+			 WHERE name = $1 AND surname = $2 AND age = $3 AND patronymic = $4)`,
+			p.Name, p.Surname, p.Age, *p.Patronymic,
 		).Scan(&exists)
 	} else {
 		err = conn.QueryRow(context.TODO(),
 			`SELECT EXISTS(SELECT 1 FROM peoples 
-			 WHERE name = $1 AND surname = $2 AND age = $3)`,	
-			 p.Name, p.Surname, p.Age,
+			 WHERE name = $1 AND surname = $2 AND age = $3)`,
+			p.Name, p.Surname, p.Age,
 		).Scan(&exists)
 	}
 	if err != nil {
@@ -113,7 +113,7 @@ func InsertPeople(conn *pgxpool.Conn, p People) (int, error) {
 func ExistPeopleById(conn *pgxpool.Conn, id int) (bool, error) {
 	var (
 		exists bool
-		err error
+		err    error
 	)
 	err = conn.QueryRow(context.TODO(),
 		`SELECT EXISTS(SELECT 1 FROM peoples 
@@ -140,7 +140,7 @@ func InsertNationalizationsById(conn *pgxpool.Conn, id int, ns []Nationalization
 		_, err = conn.Exec(context.TODO(),
 			`INSERT INTO people_nationalizations (people_id, nationalization_id)
 			 VALUES ($1, $2)`,
-			 id, nationalizationIds[i],
+			id, nationalizationIds[i],
 		)
 		if err != nil {
 			return err
@@ -262,13 +262,13 @@ func DeleteGenderByid(conn *pgxpool.Conn, id int) error {
 	)
 	if err != nil {
 		return err
-	}	
+	}
 	return nil
 }
 
 func DeleteNationalizationsById(conn *pgxpool.Conn, id int) error {
 	var (
-		nationalizationId int
+		nationalizationId  int
 		nationalizationIds []int
 	)
 	rows, err := conn.Query(context.TODO(),
@@ -288,7 +288,7 @@ func DeleteNationalizationsById(conn *pgxpool.Conn, id int) error {
 		}
 
 		nationalizationIds = append(
-			nationalizationIds, 
+			nationalizationIds,
 			nationalizationId,
 		)
 	}
@@ -319,7 +319,7 @@ func DeleteAllById(conn *pgxpool.Conn, id int) error {
 	err = DeleteGenderByid(conn, id)
 	if err != nil {
 		return err
-	}	
+	}
 	err = DeletePeopleById(conn, id)
 	if err != nil {
 		return err
@@ -353,7 +353,7 @@ func ReplaceAll(conn *pgxpool.Conn, a All) error {
 		 SET gender = $2,
 		     probability = $3
 		 WHERE people_id = $1`, a.P.Id,
-		 a.G.Gender, a.G.Probability,
+		a.G.Gender, a.G.Probability,
 	)
 	if err != nil {
 		return err
@@ -385,10 +385,10 @@ func GetPeoples(conn *pgxpool.Conn, offset, limit int, fs []FilterOperation) ([]
 						patronymic,
 						age
 		 FROM peoples
-		` + where + `
+		`+where+`
 		 LIMIT  $1
 		 OFFSET $2`,
-		 args...
+		args...,
 	)
 	if err != nil {
 		return nil, err
@@ -415,14 +415,13 @@ func GetPeoples(conn *pgxpool.Conn, offset, limit int, fs []FilterOperation) ([]
 		return nil, vars.ErrNotInDb
 	}
 
-
 	for i := range allData {
 		err = conn.QueryRow(context.TODO(),
 			`SELECT gender,
 							probability
 			 FROM genders
 			 WHERE people_id = $1`,
-			 allData[i].P.Id,
+			allData[i].P.Id,
 		).Scan(
 			&allData[i].G.Gender,
 			&allData[i].G.Probability,
@@ -431,7 +430,7 @@ func GetPeoples(conn *pgxpool.Conn, offset, limit int, fs []FilterOperation) ([]
 			return nil, err
 		}
 	}
-	
+
 	for i, e := range allData {
 		ns, err := GetNationalizationsById(conn, e.P.Id)
 		if err != nil {

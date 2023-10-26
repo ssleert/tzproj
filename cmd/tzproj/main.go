@@ -1,26 +1,26 @@
 package main
 
 import (
-	"net/http"
-	"time"
 	"fmt"
-	"os"
 	"io"
+	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/ssleert/tzproj/internal/vars"
 	"github.com/ssleert/tzproj/internal/db"
+	"github.com/ssleert/tzproj/internal/vars"
 
 	// endpoints
-	"github.com/ssleert/tzproj/internal/endpoints/put"
 	"github.com/ssleert/tzproj/internal/endpoints/del"
-	"github.com/ssleert/tzproj/internal/endpoints/update"
 	"github.com/ssleert/tzproj/internal/endpoints/get"
+	"github.com/ssleert/tzproj/internal/endpoints/put"
+	"github.com/ssleert/tzproj/internal/endpoints/update"
 
+	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
-	"github.com/justinas/alice"
 )
 
 type endPoint struct {
@@ -32,45 +32,45 @@ type endPoint struct {
 
 var (
 	endPoints = [...]endPoint{
-		{"/put",    put.Start,    put.Handler,    put.Stop},
-		{"/del",    del.Start,    del.Handler,    del.Stop},
+		{"/put", put.Start, put.Handler, put.Stop},
+		{"/del", del.Start, del.Handler, del.Stop},
 		{"/update", update.Start, update.Handler, update.Stop},
-		{"/get",    get.Start,    get.Handler,    get.Stop},
+		{"/get", get.Start, get.Handler, get.Stop},
 	}
 	logger zerolog.Logger
 )
 
 func main() {
 	var (
-		logFile io.Writer
+		logFile     io.Writer
 		loggerLevel zerolog.Level
-		err error
-	)	
+		err         error
+	)
 	if vars.LogStdout {
 		logFile = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "2006-01-02 15:04:05"}
 	} else {
 		logFile, err = os.OpenFile(
-			"./logs/" + time.Now().Format("2006_01_02-15:04:05") + ".log", 
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 
+			"./logs/"+time.Now().Format("2006_01_02-15:04:05")+".log",
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 			0666,
 		)
 		if err != nil {
 			fmt.Println("log file creation failed")
 			os.Exit(1)
 		}
-  }
+	}
 	if vars.DebugMode {
 		loggerLevel = zerolog.TraceLevel
 	} else {
 		loggerLevel = zerolog.InfoLevel
-	}	
+	}
 
 	logger = zerolog.New(logFile).
-        Level(loggerLevel).
-        With().
-        Timestamp().
-        Caller().
-				Logger()
+		Level(loggerLevel).
+		With().
+		Timestamp().
+		Caller().
+		Logger()
 	logger.Info().Msg("started")
 	vars.PrintVars(&logger)
 
@@ -106,13 +106,13 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-	
+
 	migrationsDir, err := db.GetMigrationsDir()
 	logger.Trace().
 		Err(err).
 		Str("migrations_dir", migrationsDir).
 		Send()
-		
+
 	logger.Trace().Msg("making migrations")
 	err = db.MakeMigrations(&logger)
 	if err != nil {
@@ -139,7 +139,7 @@ func main() {
 		Append(hlog.UserAgentHandler("user_agent")).
 		Append(hlog.RefererHandler("referer")).
 		Append(hlog.RequestIDHandler("req_id", "Request-Id")).
-	  Then(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Then(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			mux.ServeHTTP(w, r)
 		}))

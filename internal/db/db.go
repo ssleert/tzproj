@@ -1,15 +1,15 @@
 package db
 
 import (
-	"os"
 	"fmt"
+	"os"
 
 	"github.com/ssleert/tzproj/internal/vars"
 
-  "github.com/rs/zerolog"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/rs/zerolog"
 )
 
 type zerologLogger struct {
@@ -17,7 +17,7 @@ type zerologLogger struct {
 }
 
 func (log zerologLogger) Printf(f string, v ...any) {
-	log.l.Debug().Msgf("MIGRATION: " + f[:len(f)-1], v...)
+	log.l.Debug().Msgf("MIGRATION: "+f[:len(f)-1], v...)
 }
 
 func (log zerologLogger) Verbose() bool {
@@ -48,7 +48,7 @@ func MakeMigrations(log *zerolog.Logger) error {
 		return err
 	}
 	m, err := migrate.New(
-		"file://" + path,
+		"file://"+path,
 		GetConnString(),
 	)
 	if err != nil {

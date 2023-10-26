@@ -2,7 +2,7 @@ package utils
 
 import (
 	"encoding/json"
-  "io"
+	"io"
 	"net/http"
 	"strings"
 
@@ -37,16 +37,16 @@ func GetAddrFromStr(addrNPort *string) string {
 }
 
 func LimitUserByRemoteAddr(
-	log   *zerolog.Logger, 
-	r     *http.Request,
+	log *zerolog.Logger,
+	r *http.Request,
 	limit *limiter.Limiter[string],
 ) error {
 	log.Trace().Msg("checking req limiter")
-	
+
 	if !limit.Try(GetAddrFromStr(&r.RemoteAddr)) {
 		log.Warn().Msg("action limited")
 
-		return vars.ErrActionLimited	
+		return vars.ErrActionLimited
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func CheckBodyLen(log *zerolog.Logger, r *http.Request) error {
 			Int64("max_content_length", vars.MaxBodyLen).
 			Msg("content length is too big")
 
-		return vars.ErrBodyLenIsTooBig		
+		return vars.ErrBodyLenIsTooBig
 	}
 	return nil
 }
@@ -81,9 +81,9 @@ func ReadAllBody(log *zerolog.Logger, r *http.Request, body *[]byte) error {
 }
 
 func UnmarshalJson[T any](
-	log  *zerolog.Logger, 
-	body *[]byte, 
-	str  *T,
+	log *zerolog.Logger,
+	body *[]byte,
+	str *T,
 ) error {
 	log.Trace().Msg("unmarshaling json")
 
@@ -99,11 +99,11 @@ func UnmarshalJson[T any](
 }
 
 func EndPointPrerequisites[T any](
-	log   *zerolog.Logger,
-	w     http.ResponseWriter,
-	r     *http.Request,
+	log *zerolog.Logger,
+	w http.ResponseWriter,
+	r *http.Request,
 	limit *limiter.Limiter[string],
-	in    *T,
+	in *T,
 ) (int, error) {
 	err := LimitUserByRemoteAddr(log, r, limit)
 	if err != nil {
